@@ -5,6 +5,7 @@ paper to pdf converter suitable for texts.
 
 ## Help
 
+```
 Usage: spectrscan [OPTIONS] OUTFILE
 An unintrusive frontend of scanimage which acts as a
 paper to pdf converter suitable for texts.
@@ -39,6 +40,7 @@ Copyright  ©  2017  Franco Masotti.  License GPLv3+: GNU GPL version 3 or
 later <http://gnu.org/licenses/gpl.html>.
 This  is  free  software: you are free to change and redistribute it.  There
 is NO WARRANTY, to the extent  permitted by law.
+```
 
 ## Relevant features
 
