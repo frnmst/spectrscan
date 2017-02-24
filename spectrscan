@@ -1,0 +1,371 @@
+#!/usr/bin/env bash
+
+#
+# spectrscan
+#
+# Copyright (C) 2017 frnmst (Franco Masotti) <franco.masotti@live.com>
+#                                            <franco.masotti@student.unife.it>
+#
+# This file is part of spectrscan.
+#
+# spectrscan is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# spectrscan is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with spectrscan.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+tmp_dir="/tmp/spectrscan-$RANDOM"
+src_dir="$(pwd)"
+
+########
+########
+
+# Options to add
+#   Compress
+#   Number of pages to scan
+#   Basic image enhancer options
+#   unpaper
+#   OCR
+# Parallel processing:
+#   Watch inotifies for a new out*.pnm
+#       then process
+
+help()
+{
+cat <<-EOF
+Usage: spectrscan [OPTIONS] OUTFILE
+An unintrusive frontend of scanimage which acts as a
+paper to pdf converter suitable for texts.
+
+If the ouput file exists then the new scanned documents will be added
+as the tail of the existing one.
+
+The default system scanner is used.
+
+Options:
+    -h, --help                  print this help
+    -m, --mode                  scan in Color, Lineart, Gray or whatever
+                                supported method
+        --list-modes            list all possible scan modes
+    -o, --odd-even              preserve the order in double sided paper:
+                                scan a batch of papers one side, then the other
+    -r, --resolution            page resolution in DPI
+        --list-resolutions      list all possible resolutions
+    -s, --source                scan from the ADF, Flatbed or whatever
+                                supported method
+        --list-sources          list all possible sources
+
+Default: --mode=Lineart --resolution=600 --source=ADF
+
+Dependencies: Sane, Imagemagick, Pdftk, GNU Parallel, GAWK.
+
+Exit status:
+ 0  if OK,
+ 1  if an error occurred.
+
+Copyright  ©  2017  Franco Masotti.  License GPLv3+: GNU GPL version 3 or
+later <http://gnu.org/licenses/gpl.html>.
+This  is  free  software: you are free to change and redistribute it.  There
+is NO WARRANTY, to the extent  permitted by law.
+
+EOF
+}
+
+init()
+{
+    mkdir "$tmp_dir"
+    pushd "$tmp_dir"
+} 1>/dev/null 2>/dev/null
+
+scan()
+{
+    local mode="$1"
+    local resolution="$2"
+    local source="$3"
+    local file_counter="$4"
+
+    local batch_start=1
+    local batch_increment=1
+
+    if [ "$file_counter" = "odd" ]; then
+        batch_start=1
+        batch_increment=2
+    elif [ "$file_counter" = "even" ]; then
+        batch_start=2
+        batch_increment=2
+    else
+        batch_start=1
+        batch_increment=1
+    fi
+
+    printf "Scanning...\n" 1>&2-
+    # Put source option before resolution to avoid the error:
+    # https://bugs.launchpad.net/simple-scan/+bug/983441
+    scanimage \
+        --source "$source" \
+        --batch=spectrscan_out%d.pnm \
+        --batch-start $batch_start \
+        --batch-increment $batch_increment \
+        --resolution "$resolution" \
+        --mode "$mode" \
+        --progress \
+        --format=pnm
+}
+
+exists_output_file()
+{
+    local output_file="$1"
+
+    # Check if output file exists and is a pdf file.
+    if [ -f "$src_dir"/"$output_file" ]; then
+        if [ "$(file --mime-type "$src_dir"/"$output_file" \
+        | awk '{ print $2 }')" = "application/pdf" ]; then
+            printf "true"
+        else
+            # Not a pdf file.
+            printf "error"
+        fi
+    else
+        printf "false"
+    fi
+}
+
+pnm_to_pdf()
+{
+    printf "PNM to PDF...\n" 1>&2-
+    # n = number of new pages
+
+    # Contrast enhancement and pdf
+    # OCR stuff can go after the mv command
+    # PNM file are removed to avoid filling up the RAM.
+
+    # Time complexity: O(n/#cores)
+    ls spectrscan_out*.pnm | parallel \
+        "pamfix -truncate {} > {}.tmp; \
+         mv {}.tmp {}; \
+         convert -brightness-contrast 0x50 -compress lzw {} {}.pdf; \
+         rm {}" \
+    2>/dev/null
+
+}
+
+pdf_cat()
+{
+    local output_file="$1"
+
+    printf "Assembling PDF...\n" 1>&2-
+    # O(n)
+    # Always cat to the output file.
+    # Unlike pdfunite, pdftk does not corrupt the pdf.
+    pdftk *.pdf cat output "$output_file".tmp
+
+    # O(1)
+    if [ "$(exists_output_file "$output_file")" = "true" ]; then
+
+        cp "$src_dir"/"$output_file" "$src_dir"/."$output_file"
+
+        pdftk "$src_dir"/."$output_file" "$output_file".tmp \
+            cat output "$src_dir"/"$output_file"
+
+        rm "$src_dir"/."$output_file"
+
+    elif [ "$(exists_output_file "$output_file")" = "false" ]; then
+        mv "$output_file".tmp "$src_dir"/"$output_file"
+    else
+        printf "[ERROR]\n" 1>&2-
+        exit 1
+    fi
+
+    printf "Done.\n" 1>&2-
+}
+
+cleanup()
+{
+    popd
+    rm -rf "$tmp_dir"
+} 1>/dev/null 2>/dev/null
+
+chain()
+{
+    local mode="$1"
+    local resolution="$2"
+    local source="$3"
+    local odd_even="$4"
+    local output_file="$5"
+
+    init
+
+    if [ "$odd_even" = "true" ]; then
+        scan "$mode" "$resolution" "$source" "odd"
+        printf "Turn the paper(s) and hit return when ready\n"
+        read
+        scan "$mode" "$resolution" "$source" "even"
+    else
+        scan "$mode" "$resolution" "$source"
+    fi
+
+    pnm_to_pdf
+    pdf_cat "$output_file"
+    cleanup
+}
+
+getopt_error()
+{
+    printf "%s\n" "Try 'spectrscan --help' for more information"
+} 1>&2-
+
+get_supported_resolutions()
+{
+    printf "$(scanimage -A | grep resolution | head -n1 \
+        | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi')"
+}
+
+get_supported_modes()
+{
+    printf "$(scanimage -A | grep mode | head -n2 \
+       | tail -n 1 | awk '{print $2}' | tr '|' ' ')"
+}
+
+get_supported_sources()
+{
+     printf "$(scanimage -A | grep source | head -n1 \
+        | awk '{print $2}' | tr '|' ' ')"
+}
+
+probe_for_scanner()
+{
+    scanimage -n
+    if [ $? -eq 1 ]; then
+        printf "false"
+    else
+        printf "true"
+    fi
+}
+
+option_parser()
+{
+    local argc="$1"
+    local options="hm:or:s:"
+    local long_options="help,list-modes,list-resolutions,list-sources,mode:,odd-even,resolution:,source:"
+    local opts=""
+    local opt=""
+
+    # Default values
+    local mode="Lineart"
+    local resolution="600"
+    local source="ADF"
+    local odd_even="false"
+    local output_file=""
+
+    [ -z "$argc" ] && getopt_error && return 1
+
+    opts="$(getopt --options $options --longoptions $long_options -- $argc)"
+
+    [ $? -ne 0 ] && getopt_error && return 1
+
+    eval set -- "$opts"
+
+    while true ; do
+        case "$1" in
+            -h | --help )           shift; help; return 2                   ;;
+            -m | --mode )
+                case "$2" in
+                    "" )            getopt_error && return 1                ;;
+                    * )             mode="$2"; shift 2                      ;;
+                esac ;;
+            --list-modes )          shift; get_supported_modes; return 2    ;;
+            -o | --odd-even )       shift; odd_even="true"                  ;;
+            -r | --resolution )
+                case "$2" in
+                    "" )            getopt_error && return 1                ;;
+                    * )             resolution="$2"; shift 2                ;;
+                esac ;;
+            --list-resolutions )    shift; get_supported_resolutions; \
+                                    return 2                                ;;
+            -s | --source )
+                case "$2" in
+                    "" )            getopt_error && return 1                ;;
+                    * )             source="$2"; shift 2                    ;;
+                esac ;;
+            --list-sources )        shift; get_supported_sources; return 2  ;;
+            -- )                    shift; break                            ;;
+            * )                     return 1                                ;;
+        esac
+    done
+
+    output_file="$1"
+
+    printf ""$mode" "$resolution" "$source" "$odd_even" "$output_file""
+}
+
+check_supported_parameters()
+{
+    local parameter="$1"
+    local value="$2"
+    local counter="0"
+    local parameter_full_name=""
+    local p=""
+
+    parameter_full_name="supported_${parameter}"
+    eval "$parameter_full_name='$(get_supported_${parameter})'"
+    for p in ${!parameter_full_name}; do
+        if [ "$value" = "$p" ]; then
+            counter=$(($counter+1))
+        fi
+    done
+    if [ $counter -eq 0 ]; then
+        printf "Supported $parameter: ${!parameter_full_name}\n" 1>&2-
+        return 1
+    fi
+}
+
+preliminary_controls()
+{
+    local mode="$1"
+    local resolution="$2"
+    local source="$3"
+    local odd_even="$4"
+    local output_file="$5"
+
+    if [ -z "$output_file" ]; then
+        printf "Missing output file\n" 1>&2-
+        getopt_error
+        return 1
+    fi
+
+    printf "Probing scanner and its options...\n" 1>&2-
+
+    if [ "$(probe_for_scanner)" = "false" ]; then
+        printf "No scanner detected\n" 1>&2-
+        return 1
+    fi
+
+    { check_supported_parameters "modes" "$mode" \
+        && check_supported_parameters "resolutions" "$resolution" \
+        && check_supported_parameters "sources" "$source"; } || return 1
+
+    printf ""$mode" "$resolution" "$source" "$odd_even" "$output_file""
+}
+
+main()
+{
+    local argc="$1"
+    local values=""
+
+    { values="$(option_parser "$argc")"; } \
+        && { \
+            { values="$(preliminary_controls $values)"; } \
+                && { chain $values; }; \
+        } \
+        || { [ $? -eq 2 ] && printf "%s\n" "$values"; }
+}
+
+main "$*"
