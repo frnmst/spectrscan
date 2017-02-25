@@ -83,6 +83,10 @@ https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-w
   [AUR version](https://aur.archlinux.org/packages/pdftk-bin/)
 - [GNU Parallel](http://www.gnu.org/software/parallel/)
 
+## Origin of the name
+
+The name comes from [spectrwm](https://github.com/conformal/spectrwm)
+
 ## License
 
 ![https://www.gnu.org/graphics/gplv3-127x51.png](https://www.gnu.org/graphics/gplv3-127x51.png)
