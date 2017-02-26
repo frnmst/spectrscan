@@ -13,7 +13,7 @@ paper to pdf converter suitable for texts.
 If the ouput file exists then the new scanned documents will be added
 as the tail of the existing one.
 
-The default system scanner is used (so this must be already configured).
+The default system scanner is used.
 
 Options:
     -h, --help                  print this help
@@ -28,9 +28,17 @@ Options:
                                 supported method
         --list-sources          list all possible sources
 
-Default: --mode=Lineart --resolution=600 --source=ADF
+Default options: spectrscan --mode=Lineart --resolution=600 --source=ADF
 
-Dependencies: Sane, Imagemagick, Pdftk, GNU Parallel, GAWK.
+Dependencies:   GNU Bash
+                GNU Core Utilities
+                Gawk
+                SANE
+                ImageMagick
+                unpaper
+                PDFtk
+                GNU Parallel
+                Netpbm
 
 Exit status:
  0  if OK,
@@ -62,6 +70,52 @@ http://www.jduck.net/blog/2008/01/05/ocr-scanning/
 
 https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-with-OCR
 
+## Dependencies and explanations
+
+- [GNU Bash](http://www.gnu.org/software/bash/bash.html)
+  - Scipting language interpreter
+
+- [GNU Core Utilities](https://www.gnu.org/software/coreutils/)
+  - Basic software like `ls`, `cat`, etc...
+
+- [Gawk](http://www.gnu.org/software/gawk/)
+  - Filter some output from miscellaneous commands
+
+- [SANE](http://www.sane-project.org/)
+  - Scanner software
+
+- [ImageMagick](http://www.imagemagick.org/)
+  - PNM to PDF converter and image processing tool
+
+- [unpaper](https://github.com/Flameeyes/unpaper)
+  - Remove issues with scanned images (paper margins, etc...)
+
+- [PDFtk](https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/) 
+  - Assemble the PDF documents into a single file
+  - [Debian version](https://libreplanet.org/wiki/List_of_software_that_does_not_respect_the_Free_System_Distribution_Guidelines#pdftk)
+    which is fully free
+  - This "binary" [AUR version](https://aur.archlinux.org/packages/pdftk-bin/) is based on the Debian version
+
+- [GNU Parallel](http://www.gnu.org/software/parallel/)
+  - Execute image post processing jobs in parallel
+
+- [Netpbm](http://netpbm.sourceforge.net/)
+  - Fix the newly scanned immages by truncating the unnecessary parts. This 
+    is mostly useful when scanning from the ADF
+  - In my case I have an HP Officejet 2620 connected via USB to a server as a 
+    network printer/scanner. Scanning using the "Flatbed" option poses no 
+    problems, while using the "ADF", the image is somehow corrupted
+    and it contains a black box adjacent to the scanned document.
+    If I try to post process the image with unpaper and/or ImageMagick
+    serveral errors are reported. The only solution I found was to use
+    `pamfix -truncate`. I still haven't determined the cause of this problem
+  - A "libre" version of the package is available in Parabola GNU/Linux-libre,
+    described like this:
+
+    > A toolkit for manipulation of graphic images, without nonfree parts and
+    > patent issues 
+
+
 ## Coming soon
 
 - Options to add
@@ -73,18 +127,6 @@ https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-w
 - Better parallel processing
   - Watch inotifies for a new out*.pnm
     would be faster than post-processing in parallel
-
-## Dependencies
-
-- [GNU Bash](http://www.gnu.org/software/bash/bash.html)
-- [Gawk](http://www.gnu.org/software/gawk/)
-- [SANE](http://www.sane-project.org/)
-- [ImageMagick](http://www.imagemagick.org/)
-- [unpaper](https://github.com/Flameeyes/unpaper)
-- [PDFtk](https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/) 
-  [Debian version which is fully free](https://libreplanet.org/wiki/List_of_software_that_does_not_respect_the_Free_System_Distribution_Guidelines#pdftk)
-  [AUR version](https://aur.archlinux.org/packages/pdftk-bin/)
-- [GNU Parallel](http://www.gnu.org/software/parallel/)
 
 ## Origin of the name
 

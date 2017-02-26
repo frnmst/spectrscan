@@ -54,9 +54,16 @@ Options:
                                 supported method
         --list-sources          list all possible sources
 
-Default: --mode=Lineart --resolution=600 --source=ADF
+Default options: spectrscan --mode=Lineart --resolution=600 --source=ADF
 
-Dependencies: Sane, Imagemagick, Pdftk, GNU Parallel, GAWK.
+Dependencies:   GNU Bash
+                GNU Core Utilities
+                Gawk
+                SANE
+                ImageMagick
+                unpaper
+                PDFtk
+                GNU Parallel
 
 Exit status:
  0  if OK,
@@ -66,7 +73,6 @@ Copyright  ©  2017  Franco Masotti.  License GPLv3+: GNU GPL version 3 or
 later <http://gnu.org/licenses/gpl.html>.
 This  is  free  software: you are free to change and redistribute it.  There
 is NO WARRANTY, to the extent  permitted by law.
-
 EOF
 }
 
