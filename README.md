@@ -50,6 +50,8 @@ is NO WARRANTY, to the extent  permitted by law.
 
 - Odd-even page numbers scanning.
 
+- Basic unpaper and ImageMagick post-processing.
+
 ## Relevant links and ideas
 
 https://bugs.launchpad.net/simple-scan/+bug/983441
@@ -66,7 +68,7 @@ https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-w
   - Compression
   - Number of pages to scan
   - Basic image enhancer options (to pass to ImageMagick)
-  - `unpaper`
+  - Better options to pass to unpaper
   - OCR (training (GOCR)? + text file outputs)
 - Better parallel processing
   - Watch inotifies for a new out*.pnm
@@ -78,6 +80,7 @@ https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-w
 - [Gawk](http://www.gnu.org/software/gawk/)
 - [SANE](http://www.sane-project.org/)
 - [ImageMagick](http://www.imagemagick.org/)
+- [unpaper](https://github.com/Flameeyes/unpaper)
 - [PDFtk](https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/) 
   [Debian version which is fully free](https://libreplanet.org/wiki/List_of_software_that_does_not_respect_the_Free_System_Distribution_Guidelines#pdftk)
   [AUR version](https://aur.archlinux.org/packages/pdftk-bin/)

@@ -22,21 +22,12 @@
 # along with spectrscan.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-tmp_dir="/tmp/spectrscan-$RANDOM"
+# /tmp fill up quickly
+tmp_dir="$(pwd)/.spectrscan-$RANDOM"
 src_dir="$(pwd)"
 
 ########
 ########
-
-# Options to add
-#   Compress
-#   Number of pages to scan
-#   Basic image enhancer options
-#   unpaper
-#   OCR
-# Parallel processing:
-#   Watch inotifies for a new out*.pnm
-#       then process
 
 help()
 {
@@ -111,7 +102,7 @@ scan()
     # https://bugs.launchpad.net/simple-scan/+bug/983441
     scanimage \
         --source "$source" \
-        --batch=spectrscan_out%d.pnm \
+        --batch=spectrscan_out%08d.pnm \
         --batch-start $batch_start \
         --batch-increment $batch_increment \
         --resolution "$resolution" \
@@ -138,23 +129,27 @@ exists_output_file()
     fi
 }
 
+convert_single()
+{
+    filE="$1"
+
+    pamfix -truncate "$filE" > "$filE".tmp.pnm
+    unpaper --overwrite -q "$filE".tmp.pnm "$filE"
+    # OCR stuff can go here.
+    # Contrast enhancement and pdf.
+    convert -contrast-stretch 0.5%x10% -compress lzw "$filE" "$filE".pdf
+} 1>/dev/null 2>/dev/null
+
 pnm_to_pdf()
 {
     printf "PNM to PDF...\n" 1>&2-
+
+    # A hack to avoid GNU Parallel's message
+    mkdir -p ~/.parallel && touch ~/.parallel/will-cite
     # n = number of new pages
-
-    # Contrast enhancement and pdf
-    # OCR stuff can go after the mv command
-    # PNM file are removed to avoid filling up the RAM.
-
     # Time complexity: O(n/#cores)
-    ls spectrscan_out*.pnm | parallel \
-        "pamfix -truncate {} > {}.tmp; \
-         mv {}.tmp {}; \
-         convert -brightness-contrast 0x50 -compress lzw {} {}.pdf; \
-         rm {}" \
-    2>/dev/null
-
+    export -f convert_single
+    parallel --bar convert_single ::: "$(ls spectrscan_*.pnm)"
 }
 
 pdf_cat()
@@ -204,13 +199,19 @@ chain()
     init
 
     if [ "$odd_even" = "true" ]; then
-        scan "$mode" "$resolution" "$source" "odd"
-        printf "Turn the paper(s) and hit return when ready\n"
-        read
-        scan "$mode" "$resolution" "$source" "even"
+        scan "$mode" "$resolution" "$source" "odd" \
+            && printf "Turn the paper(s) and hit return when ready\n" \
+            && read \
+            && scan "$mode" "$resolution" "$source" "even"
     else
         scan "$mode" "$resolution" "$source"
     fi
+
+    # Feeder out of documents
+#    if [ $? -eq 7 ]; then
+#        printf "Turn the paper(s) and hit return when ready\n"
+#        return 1
+#    fi
 
     pnm_to_pdf
     pdf_cat "$output_file"
@@ -303,7 +304,12 @@ option_parser()
 
     output_file="$1"
 
-    printf ""$mode" "$resolution" "$source" "$odd_even" "$output_file""
+    printf "\
+        "$mode" \
+        "$resolution" \
+        "$source" \
+        "$odd_even" \
+        "$output_file""
 }
 
 check_supported_parameters()
@@ -352,7 +358,12 @@ preliminary_controls()
         && check_supported_parameters "resolutions" "$resolution" \
         && check_supported_parameters "sources" "$source"; } || return 1
 
-    printf ""$mode" "$resolution" "$source" "$odd_even" "$output_file""
+    printf "\
+        "$mode" \
+        "$resolution" \
+        "$source" \
+        "$odd_even" \
+        "$output_file""
 }
 
 main()
