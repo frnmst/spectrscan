@@ -17,28 +17,33 @@ The default system scanner is used.
 
 Options:
     -h, --help                  print this help
+    -i, --imagemagick-options   pass options to ImageMagick
+                                to post-process the documents
     -m, --mode                  scan in Color, Lineart, Gray or whatever
                                 supported method
         --list-modes            list all possible scan modes
-    -o, --odd-even              preserve the order in double sided paper:
+    -o, --odd-even              toggle preserve the order in double sided paper:
                                 scan a batch of papers one side, then the other
     -r, --resolution            page resolution in DPI
         --list-resolutions      list all possible resolutions
     -s, --source                scan from the ADF, Flatbed or whatever
                                 supported method
         --list-sources          list all possible sources
+    -u, --unpaper-options       pass options to unpaper
+                                to post-process the documents
 
-Default options: spectrscan --mode=Lineart --resolution=600 --source=ADF
+Current enabled options:
+--imagemagick-options="-contrast-stretch 0.5%x10% -compress lzw"
+--mode "Lineart" --odd-even="false" --resolution "600"
+--source "ADF" --unpaper-options="true"
 
-Dependencies:   GNU Bash
-                GNU Core Utilities
-                Gawk
-                SANE
-                ImageMagick
-                unpaper
-                PDFtk
-                GNU Parallel
-                Netpbm
+The magic values of "true" and "false" can be used
+to enable or disable:
+    --odd-even=<value>
+    --unpaper-options=<value> (if "false", unpaper is disabled)
+
+Dependencies:   GNU Bash; GNU Core Utilities; Gawk; SANE; ImageMagick
+                unpaper; PDFtk; GNU Parallel
 
 Exit status:
  0  if OK,
@@ -121,9 +126,10 @@ https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-w
 - Options to add
   - Compression
   - Number of pages to scan
-  - Basic image enhancer options (to pass to ImageMagick)
-  - Better options to pass to unpaper
+  - Option for prompting for each page to scan
+  - Better default options to pass to unpaper
   - OCR (training (GOCR)? + text file outputs)
+    - options: keep PDF, keep txt, keep both
 - Better parallel processing
   - Watch inotifies for a new out*.pnm
     would be faster than post-processing in parallel
