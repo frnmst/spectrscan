@@ -3,6 +3,27 @@
 An unintrusive frontend of scanimage which acts as a
 paper to pdf converter suitable for texts.
 
+## Examples
+
+Remember that the output file supplied in the command line can either be an 
+empty file or an existing PDF file. In the latter case, newly scanned documents
+will be automatically appended to the tail of the file.
+
+- Scan in lineart mode, from the automatic document feeder,
+  with a resolution of 600 DPI, using Unpaper and with image enhancing options 
+  on the output file `out.pdf`
+
+    ./specrescan out.pdf
+
+- Same as before but for double sided paper
+
+    ./spectrscan -o out.pdf
+
+- Scan in colour, with a resolution of 300 DPI, using the flatbed,
+  on the output file `out.pdf`
+
+    ./spectrscan -m Color -r 300 -s Flatbed out.pdf
+
 ## Help
 
 ```
