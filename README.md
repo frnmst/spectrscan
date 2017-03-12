@@ -24,6 +24,16 @@ will be automatically appended to the tail of the file.
 
     ./spectrscan -m Color -r 300 -s Flatbed out.pdf
 
+## Path
+
+You can call spectrscan from any directory by modifying the shell's path.
+You can then call spectrscan:
+
+    cd <specrscan repo directory>
+    PATH="$PATH:$(pwd)"
+    cd <document destination directory>
+    spectrscan <whatever>
+
 ## Help
 
 ```
