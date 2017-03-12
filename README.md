@@ -13,16 +13,16 @@ will be automatically appended to the tail of the file.
   with a resolution of 600 DPI, using Unpaper and with image enhancing options 
   on the output file `out.pdf`
 
-    ./specrescan out.pdf
+        ./specrescan out.pdf
 
 - Same as before but for double sided paper
 
-    ./spectrscan -o out.pdf
+        ./spectrscan -o out.pdf
 
 - Scan in colour, with a resolution of 300 DPI, using the flatbed,
   on the output file `out.pdf`
 
-    ./spectrscan -m Color -r 300 -s Flatbed out.pdf
+        ./spectrscan -m Color -r 300 -s Flatbed out.pdf
 
 ## Help
 
