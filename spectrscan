@@ -158,10 +158,6 @@ convert_single()
         mv "$filE".tmp.pnm.bis "$filE".tmp.pnm
     fi
 
-    # OCR stuff goes here.
-
-    printf "\n UNPAPER = $unpaper_options \n"
-
     if [ "$unpaper_options" = "true" ]; then
         unpaper --overwrite -q "$filE".tmp.pnm "$filE".pnm
     elif [ "$unpaper_options" = "false" ]; then
@@ -170,9 +166,11 @@ convert_single()
         unpaper --overwrite -q $unpaper_options "$filE".tmp.pnm "$filE".pnm
     fi
 
+    # OCR stuff goes here.
+
     convert -compress lzw "$filE".pnm "$filE".pdf
 
-} #1>/dev/null 2>/dev/null
+} 1>/dev/null 2>/dev/null
 
 pnm_to_pdf()
 {
