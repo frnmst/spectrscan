@@ -13,7 +13,7 @@ will be automatically appended to the tail of the file.
   with a resolution of 600 DPI, using Unpaper and with image enhancing options 
   on the output file `out.pdf`
 
-      ./specrescan out.pdf
+        ./specrescan out.pdf
 
 - Same as before but for double sided paper
 
@@ -22,7 +22,27 @@ will be automatically appended to the tail of the file.
 - Scan in colour, with a resolution of 300 DPI, using the flatbed,
   on the output file `out.pdf`
 
-      ./spectrscan -m Color -r 300 -s Flatbed out.pdf
+        ./spectrscan -m Color -r 300 -s Flatbed out.pdf
+
+- Disable unpaper (same procedure for imagemagick):
+
+        ./spectrscan -ufalse out.pdf
+        ./spectrscan --unpaper_options=false out.pdf
+
+If the scanned text results unreadable try using the `Gray` mode instead
+of the default `Lineart`.
+
+Currently, passing options to unpaper and imagemagick is not working. You 
+should edit the options directly in the script. By default, contrast is set at 
+a very high level. You can edit
+
+    imagemagick_options="-normalize -level 70%,100%,1.0"
+
+with something like:
+
+    imagemagick_options="-normalize -level 20%,100%,1.0"
+
+and see what happens.
 
 ## Path
 
@@ -105,6 +125,8 @@ http://netpbm.sourceforge.net/doc/pamfix.html
 http://www.jduck.net/blog/2008/01/05/ocr-scanning/
 
 https://www.ubuntu-user.com/Magazine/Archive/2013/18/Scanning-and-editing-text-with-OCR
+
+http://www.jpeek.com/articles/linuxmag/2006-08/
 
 ## Dependencies and explanations
 

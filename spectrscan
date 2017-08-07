@@ -24,7 +24,7 @@
 tmp_dir="$(pwd)/.spectrscan-$RANDOM"
 src_dir="$(pwd)"
 
-imagemagick_options="-contrast-stretch 0.5%x10% -compress lzw"
+imagemagick_options="-normalize -level 70%,100%,1.0"
 mode="Lineart"
 resolution="600"
 source="ADF"
@@ -144,30 +144,35 @@ exists_output_file()
 
 convert_single()
 {
+    # First convert to pdf with the image enhancements, then apply unpaper.
+    # This giuves better results because it avoids missing information in
+    # the finakl result.
     local filE="$1"
 
-    pamfix -truncate "$filE" > "$filE".tmp.pnm
+    pamfix -truncate "$filE" > "$filE".tmp.pnm.bis
 
-    if [ "$unpaper_options" = "true" ]; then
-        unpaper --overwrite -q "$filE".tmp.pnm "$filE"
-    elif [ "$unpaper_options" = "false" ]; then
-        mv "$filE".tmp.pnm "$filE"
+    if [ "$imagemagick_options" != "true" ] \
+        && [ "$imagemagick_options" != "false" ]; then
+        convert $imagemagick_options "$filE".tmp.pnm.bis "$filE".tmp.pnm
     else
-        unpaper --overwrite -q $unpaper_options "$filE".tmp.pnm "$filE"
+        mv "$filE".tmp.pnm.bis "$filE".tmp.pnm
     fi
 
     # OCR stuff goes here.
 
+    printf "\n UNPAPER = $unpaper_options \n"
 
-    if [ "$imagemagick_options" = "true" ]; then
-        convert "$filE" "$filE".pdf
-    elif [ "$imagemagick_options" = "false" ]; then
-        convert "$filE" "$filE".pdf
+    if [ "$unpaper_options" = "true" ]; then
+        unpaper --overwrite -q "$filE".tmp.pnm "$filE".pnm
+    elif [ "$unpaper_options" = "false" ]; then
+        mv "$filE".tmp.pnm "$filE".pnm
     else
-        # Contrast enhancement and pdf.
-        convert $imagemagick_options "$filE" "$filE".pdf
+        unpaper --overwrite -q $unpaper_options "$filE".tmp.pnm "$filE".pnm
     fi
-} 1>/dev/null 2>/dev/null
+
+    convert -compress lzw "$filE".pnm "$filE".pdf
+
+} #1>/dev/null 2>/dev/null
 
 pnm_to_pdf()
 {
@@ -178,6 +183,8 @@ pnm_to_pdf()
     # n = number of new pages
     # Time complexity: O(n/#cores)
     export -f convert_single
+    export unpaper_options
+    export imagemagick_options
     parallel --bar convert_single ::: "$(ls spectrscan_*.pnm)"
 }
 
@@ -212,7 +219,7 @@ pdf_cat()
 cleanup()
 {
     popd
-    rm -rf "$tmp_dir" 
+    rm -rf "$tmp_dir"
 } 1>/dev/null 2>/dev/null
 
 chain()
@@ -293,8 +300,10 @@ source:,unpaper-options::"
     while true ; do
         case "$1" in
             -h | --help )           shift; help; return 2                   ;;
-            -i | --imagemagick-options ) \
-                                    imagemagick_options="$2"; shift 2       ;;
+            -i | --imagemagick-options )
+                case "$2" in
+                    * )             imagemagick_options="$2"; shift 2       ;;
+                esac ;;
             -m | --mode )
                 case "$2" in
                     "" )            getopt_error && return 1                ;;
@@ -320,7 +329,7 @@ source:,unpaper-options::"
                     * )             source="$2"; shift 2                    ;;
                 esac ;;
             --list-sources )        shift; get_supported_sources; return 2  ;;
-            -u | --unpaper-options ) \
+            -u | --unpaper-options )
                                     unpaper_options="$2"; shift 2           ;;
             -- )                    shift; break                            ;;
             * )                     return 1                                ;;
