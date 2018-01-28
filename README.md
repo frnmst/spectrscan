@@ -3,11 +3,34 @@
 An unintrusive frontend of scanimage which acts as a
 paper to pdf converter suitable for texts.
 
+# Table of contents
+
+[](TOC)
+
+- [spectrscan](#spectrscan)
+- [Table of contents](#table-of-contents)
+    - [Examples](#examples)
+        - [Default options](#default-options)
+        - [Two-sided](#two-sided)
+        - [Misc](#misc)
+    - [Path](#path)
+    - [Help](#help)
+    - [Relevant features](#relevant-features)
+    - [Relevant links and ideas](#relevant-links-and-ideas)
+    - [Dependencies and explanations](#dependencies-and-explanations)
+    - [Coming soon](#coming-soon)
+    - [Origin of the name](#origin-of-the-name)
+    - [License](#license)
+
+[](TOC)
+
 ## Examples
 
 Remember that the output file supplied in the command line can either be an 
 empty file or an existing PDF file. In the latter case, newly scanned documents
 will be automatically appended to the tail of the file.
+
+### Default options
 
 - Scan in lineart mode, from the automatic document feeder,
   with a resolution of 600 DPI, using Unpaper and with image enhancing options 
@@ -15,9 +38,13 @@ will be automatically appended to the tail of the file.
 
         ./specrescan out.pdf
 
+### Two-sided
+
 - Same as before but for double sided paper
 
         ./spectrscan -o out.pdf
+
+### Misc
 
 - Scan in colour, with a resolution of 300 DPI, using the flatbed,
   on the output file `out.pdf`
@@ -172,7 +199,6 @@ http://www.jpeek.com/articles/linuxmag/2006-08/
 
     > A toolkit for manipulation of graphic images, without nonfree parts and
     > patent issues 
-
 
 ## Coming soon
 
