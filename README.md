@@ -121,7 +121,7 @@ to enable or disable:
     --unpaper-options=<value> (if "false", unpaper is disabled)
 
 Dependencies:   GNU Bash; GNU Core Utilities; Gawk; SANE; ImageMagick
-                unpaper; PDFtk; GNU Parallel
+                unpaper; PDFtk; GNU Parallel; Netpbm
 
 Exit status:
  0  if OK,
