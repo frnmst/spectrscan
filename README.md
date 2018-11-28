@@ -20,6 +20,7 @@ paper to pdf converter suitable for texts.
     - [Dependencies and explanations](#dependencies-and-explanations)
     - [Coming soon](#coming-soon)
     - [Origin of the name](#origin-of-the-name)
+    - [Troubleshooting](#troubleshooting)
     - [License](#license)
 
 [](TOC)
@@ -216,6 +217,15 @@ http://www.jpeek.com/articles/linuxmag/2006-08/
 ## Origin of the name
 
 The name comes from [spectrwm](https://github.com/conformal/spectrwm)
+
+## Troubleshooting
+
+If pdftk repots that PDF files are missing this is probably due to the
+new ImageMagick security policies. Remove `PDF` from `/etc/ImageMagick-7/policy.xml`
+
+This is the error returned by `convert`:
+
+    convert: attempt to perform an operation not allowed by the security policy `PDF' @ error/constitute.c/IsCoderAuthorized/408.
 
 ## License
 
