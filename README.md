@@ -3,12 +3,12 @@
 An unintrusive frontend of scanimage which acts as a
 paper to pdf converter suitable for texts.
 
-# Table of contents
+## Table of contents
 
 [](TOC)
 
 - [spectrscan](#spectrscan)
-- [Table of contents](#table-of-contents)
+    - [Table of contents](#table-of-contents)
     - [Examples](#examples)
         - [Default options](#default-options)
         - [Two-sided](#two-sided)
