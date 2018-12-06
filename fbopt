@@ -43,8 +43,9 @@ Options:
     -r, --resolution=RESOLUTION         page resolution in DPI
     -s, --source=SOURCE                 scan from the ADF, Flatbed or whatever
                                         supported method
-    -t, --two-sided                     toggle preserve the order in double sided paper:
-                                        scan a batch of papers one side, then the other
+    -t, --two-sided                     toggle preserve the order in
+                                        double sided paper: scan a batch of
+                                        papers one side, then the other
     --two-sided-reverse                 same as '--odd-even' but with the need of
                                         reversing every single paper.
     -u, --unpaper[=OPTIONS]             enable unpaper. You may pass
@@ -161,10 +162,10 @@ main()
     # ./program -flag ''
     # This can also be done inside the option parser loop but to avoid nestings
     # I prefer it done here.
-    { [ -z "${imagemagick}" \
+    { [ -z "${imagemagick}" ] \
         || [ -z "${mode}" ] \
         || [ -z "${resolution}" ] \
-        || [ -z "${source}"; } \
+        || [ -z "${source}" ]; } \
         && getopt_error && return 1
     [ "${print_flags}" = 'true' ] \
         && show_flags \
@@ -181,14 +182,20 @@ main()
 
     # From now on you should call a function or an external program
     # using the values of the flag variables.
-    [ "${list_modes}" = 'true' ] && get_supported_modes && return ${?}
-    [ "${list_resolutions}" = 'true' ] && get_supported_resolutions && return ${?}
-    [ "${list_sources}" = 'true' ] && get_supported_sources && return ${?}
+    [ "${list_modes}" = 'true' ] \
+        && get_supported_modes "$(get_supported_parameters)" \
+        && return ${?}
+    [ "${list_resolutions}" = 'true' ] \
+        && get_supported_resolutions "$(get_supported_parameters)" \
+        && return ${?}
+    [ "${list_sources}" = 'true' ] \
+        && get_supported_sources "$(get_supported_parameters)" \
+        && return ${?}
 
     local output_file="${1}"
     [ -z "${output_file}" ] && getopt_error && return 1
 
-    preliminary_controls \
+    preliminary_checks \
         "${imagemagick}" \
         "${mode}" \
         "${resolution}" \

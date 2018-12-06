@@ -22,23 +22,28 @@
 # along with spectrscan.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-tmp_dir="$(pwd)/.spectrscan-$RANDOM"
-src_dir="$(pwd)"
+set -x
+#set -e
+TMP_DIR="$(pwd)/.spectrscan-$RANDOM"
+SRC_DIR="$(pwd)"
 
-output_file=""
-
-########
-########
-
-init()
+check_software()
 {
-    mkdir "$tmp_dir"
-    pushd "$tmp_dir"
+    which \
+        scanimage \
+        unapaper \
+        awk \
+        convert \
+        pdftk \
+        parallel \
+        file \
+        pamfix \
+        netpbm
 } 1>/dev/null 2>/dev/null
 
 scan()
 {
-    local file_counter="$1"
+    local file_counter="${1}"
 
     local batch_start=1
     local batch_increment=1
@@ -60,8 +65,8 @@ scan()
     scanimage \
         --source "$source" \
         --batch=spectrscan_out%08d.pnm \
-        --batch-start $batch_start \
-        --batch-increment $batch_increment \
+        --batch-start ${batch_start} \
+        --batch-increment ${batch_increment} \
         --resolution "$resolution" \
         --mode "$mode" \
         --progress \
@@ -71,8 +76,8 @@ scan()
 exists_output_file()
 {
     # Check if output file exists and is a pdf file.
-    if [ -f "$src_dir"/"$output_file" ]; then
-        if [ "$(file --mime-type "$src_dir"/"$output_file" \
+    if [ -f "$SRC_DIR"/"$output_file" ]; then
+        if [ "$(file --mime-type "$SRC_DIR"/"$output_file" \
         | awk '{ print $2 }')" = "application/pdf" ]; then
             printf "true"
         else
@@ -87,9 +92,9 @@ exists_output_file()
 convert_single()
 {
     # First convert to pdf with the image enhancements, then apply unpaper.
-    # This giuves better results because it avoids missing information in
-    # the finakl result.
-    local filE="$1"
+    # This gives better results because it avoids missing information
+    # removed by unpaper in the final result.
+    local filE="${1}"
 
     pamfix -truncate "$filE" > "$filE".tmp.pnm.bis
 
@@ -139,51 +144,21 @@ pdf_cat()
     # O(1)
     if [ "$(exists_output_file)" = "true" ]; then
 
-        cp "$src_dir"/"$output_file" "$src_dir"/."$output_file"
+        cp "$SRC_DIR"/"$output_file" "$SRC_DIR"/."$output_file"
 
-        pdftk "$src_dir"/."$output_file" "$output_file".tmp \
-            cat output "$src_dir"/"$output_file"
+        pdftk "$SRC_DIR"/."$output_file" "$output_file".tmp \
+            cat output "$SRC_DIR"/"$output_file"
 
-        rm "$src_dir"/."$output_file"
+        rm "$SRC_DIR"/."$output_file"
 
     elif [ "$(exists_output_file)" = "false" ]; then
-        mv "$output_file".tmp "$src_dir"/"$output_file"
+        mv "$output_file".tmp "$SRC_DIR"/"$output_file"
     else
         printf "[ERROR]\n" 1>&2-
         exit 1
     fi
 
     printf "Done.\n" 1>&2-
-}
-
-cleanup()
-{
-    popd
-    rm -rf "$tmp_dir"
-} 1>/dev/null 2>/dev/null
-
-chain()
-{
-    init
-
-    if [ "$odd_even" = "true" ]; then
-        scan "odd" \
-            && printf "Turn the paper(s) and hit return when ready\n" \
-            && read \
-            && scan "even"
-    else
-        scan
-    fi
-
-    # Feeder out of documents.
-    if [ $? -eq 7 ]; then
-        printf "No paper inserted\n" 1>&2
-        return 1
-    fi
-
-    pnm_to_pdf
-    pdf_cat
-    cleanup
 }
 
 get_supported_parameters()
@@ -214,38 +189,75 @@ get_supported_sources()
 
 check_supported_parameters()
 {
-    local parameter="$1"
-    local value="$2"
+    local parameter="${1}"
+    local value="${2}"
+    local supported_parameters="${3}"
     local counter=0
-    local parameter_full_name=""
-    local p=""
+    local parameter_full_name=''
+    local p=''
 
-    #TODO.
     parameter_full_name="supported_${parameter}"
-    eval "$parameter_full_name='$(get_supported_${parameter})'"
+    eval "$parameter_full_name='$(get_supported_"${parameter}" "${supported_parameters}")'"
     for p in ${!parameter_full_name}; do
         if [ "$value" = "$p" ]; then
             counter=$(($counter+1))
         fi
     done
     if [ $counter -eq 0 ]; then
-        printf "Supported $parameter: ${!parameter_full_name}\n" 1>&2-
+        printf "ERROR: Supported $parameter: ${!parameter_full_name}\n" 1>&2-
         return 1
     fi
 }
 
-preliminary_controls()
+chain()
 {
-    printf "Probing scanner and its options...\n" 1>&2-
+    mkdir "$TMP_DIR"
+    pushd "$TMP_DIR"
 
-    params="$(get_supported_parameters)"
+    if [ "$odd_even" = "true" ]; then
+        scan "odd" \
+            && printf "%s\n" 'turn the paper(s) and hit return when ready' \
+            && read \
+            && scan "even"
+    else
+        scan
+    fi
+
+    # Feeder out of documents.
+    if [ $? -eq 7 ]; then
+        printf "No paper inserted\n" 1>&2
+        return 1
+    fi
+
+    pnm_to_pdf
+    pdf_cat
+    cleanup
+
+    popd
+    rm -rf "$TMP_DIR"
+}
+
+preliminary_checks()
+{
+    # Leak all variables to avoid passing them every time.
+    imagemagick="${1}"
+    mode="${2}"
+    resolution="${3}"
+    source="${4}"
+    unpaper="${5}"
+    output_file="${6}"
+
+    # Get the parameters and check that the scanner is connected.
+    local params="$(get_supported_parameters)"
     [ ${?} -ne 0 ] && return ${?}
 
-    { check_supported_parameters "modes" "$mode" \
-        && check_supported_parameters "resolutions" "$resolution" \
-        && check_supported_parameters "sources" "$source"; } || return 1
+    { check_supported_parameters "modes" "${mode}" "${params}" \
+        && check_supported_parameters "resolutions" "${resolution}" "${params}" \
+        && check_supported_parameters "sources" "${source}" "${params}"; } \
+        || return 1
 
     chain
 }
 
+check_software || { printf "%s\n" 'check software'; exit ${?}; }
 . ./fbopt
