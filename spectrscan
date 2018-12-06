@@ -21,72 +21,14 @@
 # You should have received a copy of the GNU General Public License
 # along with spectrscan.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 tmp_dir="$(pwd)/.spectrscan-$RANDOM"
 src_dir="$(pwd)"
 
-imagemagick_options="-normalize -level 70%,100%,1.0"
-mode="Lineart"
-resolution="600"
-source="ADF"
-odd_even="false"
-unpaper_options="true"
 output_file=""
 
 ########
 ########
-
-help()
-{
-cat <<-EOF
-Usage: spectrscan [OPTIONS] OUTFILE
-An unintrusive frontend of scanimage which acts as a
-paper to pdf converter suitable for texts.
-
-If the ouput file exists then the new scanned documents will be added
-as the tail of the existing one.
-
-The default system scanner is used.
-
-Options:
-    -h, --help                  print this help
-    -i, --imagemagick-options   pass options to ImageMagick
-                                to post-process the documents
-    -m, --mode                  scan in Color, Lineart, Gray or whatever
-                                supported method
-        --list-modes            list all possible scan modes
-    -o, --odd-even              toggle preserve the order in double sided paper:
-                                scan a batch of papers one side, then the other
-    -r, --resolution            page resolution in DPI
-        --list-resolutions      list all possible resolutions
-    -s, --source                scan from the ADF, Flatbed or whatever
-                                supported method
-        --list-sources          list all possible sources
-    -u, --unpaper-options       pass options to unpaper
-                                to post-process the documents
-
-Current enabled options:
---imagemagick-options="$imagemagick_options"
---mode "$mode" --odd-even="$odd_even" --resolution "$resolution"
---source "$source" --unpaper-options="$unpaper_options"
-
-The magic values of "true" and "false" can be used
-to enable or disable:
-    --odd-even=<value>
-    --unpaper-options=<value> (if "false", unpaper is disabled)
-
-Dependencies:   GNU Bash; GNU Core Utilities; Gawk; SANE; ImageMagick
-                unpaper; PDFtk; GNU Parallel; Netpbm
-
-Exit status:
- 0  if OK,
- 1  if an error occurred.
-
-Copyright  ©  2017  Franco Masotti.  License GPLv3+: GNU GPL version 3 or
-later <http://gnu.org/licenses/gpl.html>.
-This  is  free  software: you are free to change and redistribute it.  There
-is NO WARRANTY, to the extent  permitted by law.
-EOF
-}
 
 init()
 {
@@ -179,7 +121,7 @@ pnm_to_pdf()
     # A hack to avoid GNU Parallel's message
     mkdir -p ~/.parallel && touch ~/.parallel/will-cite
     # n = number of new pages
-    # Time complexity: O(n/#cores)
+    # Time complexity: O(n/#threads)
     export -f convert_single
     export unpaper_options
     export imagemagick_options
@@ -233,7 +175,7 @@ chain()
         scan
     fi
 
-    # Feeder out of documents
+    # Feeder out of documents.
     if [ $? -eq 7 ]; then
         printf "No paper inserted\n" 1>&2
         return 1
@@ -244,97 +186,30 @@ chain()
     cleanup
 }
 
-getopt_error()
+get_supported_parameters()
 {
-    printf "%s\n" "Try 'spectrscan --help' for more information"
-} 1>&2-
+    scanimage -A | grep -e '--source' -e '--mode' -e '--resolution'
+}
 
 get_supported_resolutions()
 {
-    printf "%s\n" "$(scanimage -A | grep resolution | head -n1 \
-        | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi')"
+    local supported_params="${1}"
+
+    echo "${supported_params}" | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi'
 }
 
 get_supported_modes()
 {
-    printf "%s\n" "$(scanimage -A | grep mode | head -n2 \
-       | tail -n 1 | awk '{print $2}' | tr '|' ' ')"
+    local supported_params="${1}"
+
+    echo "${supported_params}" | grep mode | awk '{print $2}' | tr '|' ' '
 }
 
 get_supported_sources()
 {
-     printf "%s\n" "$(scanimage -A | grep source | head -n1 \
-        | awk '{print $2}' | tr '|' ' ')"
-}
+    local supported_params="${1}"
 
-probe_for_scanner()
-{
-    scanimage -n
-    if [ $? -eq 1 ]; then
-        printf "false"
-    else
-        printf "true"
-    fi
-}
-
-option_parser()
-{
-    local argc="$1"
-    local options="i::hm:o::r:s:u::"
-    local long_options="help,imagemagick-options::,list-modes,\
-list-resolutions,list-sources,mode:,odd-even::,resolution:,\
-source:,unpaper-options::"
-    local opts=""
-    local opt=""
-
-    [ -z "$argc" ] && getopt_error && return 1
-
-    opts="$(getopt --options $options --longoptions $long_options --name spectrscan -- $argc)"
-
-    [ $? -ne 0 ] && getopt_error && return 1
-
-    eval set -- "$opts"
-
-    while true ; do
-        case "$1" in
-            -h | --help )           shift; help; return 2                   ;;
-            -i | --imagemagick-options )
-                case "$2" in
-                    * )             imagemagick_options="$2"; shift 2       ;;
-                esac ;;
-            -m | --mode )
-                case "$2" in
-                    "" )            getopt_error && return 1                ;;
-                    * )             mode="$2"; shift 2                      ;;
-                esac ;;
-            --list-modes )          shift; get_supported_modes; return 2    ;;
-            -o | --odd-even )
-                case "$2" in
-                    "true" | "" )   odd_even="true"; shift 2                ;;
-                    "false" )       odd_even="false"; shift 2               ;;
-                    * )             getopt_error && return 1                ;;
-                esac ;;
-            -r | --resolution )
-                case "$2" in
-                    "" )            getopt_error && return 1                ;;
-                    * )             resolution="$2"; shift 2                ;;
-                esac ;;
-            --list-resolutions )    shift; get_supported_resolutions; \
-                                    return 2                                ;;
-            -s | --source )
-                case "$2" in
-                    "" )            getopt_error && return 1                ;;
-                    * )             source="$2"; shift 2                    ;;
-                esac ;;
-            --list-sources )        shift; get_supported_sources; return 2  ;;
-            -u | --unpaper-options )
-                                    unpaper_options="$2"; shift 2           ;;
-            -- )                    shift; break                            ;;
-            * )                     return 1                                ;;
-        esac
-    done
-
-    output_file="$1"
+    echo "${supported_params}" | grep source | awk '{print $2}' | tr '|' ' '
 }
 
 check_supported_parameters()
@@ -345,6 +220,7 @@ check_supported_parameters()
     local parameter_full_name=""
     local p=""
 
+    #TODO.
     parameter_full_name="supported_${parameter}"
     eval "$parameter_full_name='$(get_supported_${parameter})'"
     for p in ${!parameter_full_name}; do
@@ -360,29 +236,16 @@ check_supported_parameters()
 
 preliminary_controls()
 {
-    if [ -z "$output_file" ]; then
-        printf "Missing output file\n" 1>&2-
-        getopt_error
-        return 1
-    fi
-
     printf "Probing scanner and its options...\n" 1>&2-
 
-    if [ "$(probe_for_scanner)" = "false" ]; then
-        printf "No scanner detected\n" 1>&2-
-        return 1
-    fi
+    params="$(get_supported_parameters)"
+    [ ${?} -ne 0 ] && return ${?}
 
     { check_supported_parameters "modes" "$mode" \
         && check_supported_parameters "resolutions" "$resolution" \
         && check_supported_parameters "sources" "$source"; } || return 1
+
+    chain
 }
 
-main()
-{
-    local argc="$1"
-
-    option_parser "$argc" && { preliminary_controls && chain; }
-}
-
-main "$*"
+. ./fbopt

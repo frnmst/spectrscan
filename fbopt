@@ -1,0 +1,213 @@
+#!/bin/bash
+#
+# fbopt version 0.4.1
+#
+# Written in 2018 by Franco Masotti/frnmst <franco.masotti@live.com>
+#
+# To the extent possible under law, the author(s) have dedicated all 
+# copyright and related and neighboring rights to this software to the public 
+# domain worldwide. This software is distributed without any warranty.
+#
+# You should have received a copy of the CC0 Public Domain Dedication along 
+# with this software. If not, see 
+# <http://creativecommons.org/publicdomain/zero/1.0/>. 
+#
+#
+# See also https://frnmst.gitlab.io/notes/my-bash-option-parsing-template.html
+#
+
+show_help()
+{
+    cat <<-EOF
+Usage: spectrscan [OPTION] OUTFILE
+An unintrusive frontend of scanimage which acts as a
+paper to pdf converter suitable for texts.
+
+If the ouput file exists then the new scanned documents will be added
+as the tail of the existing one.
+
+The default system scanner is used.
+
+Mandatory arguments to long options are mandatory for short options too.
+Options:
+    -h, --help                          print this help
+    -i, --imagemagick=OPTIONS           pass options to ImageMagick
+                                        to post-process the documents
+    --list-modes                        list all possible scan modes
+    --list-resolutions                  list all possible resolutions
+    --list-sources                      list all possible sources
+    -m, --mode=MODE                     scan in Color, Lineart, Gray or whatever
+                                        supported method
+    --print-flags                       print the enabled options. This can also
+                                        be used to print the default options
+    -r, --resolution=RESOLUTION         page resolution in DPI
+    -s, --source=SOURCE                 scan from the ADF, Flatbed or whatever
+                                        supported method
+    -t, --two-sided                     toggle preserve the order in double sided paper:
+                                        scan a batch of papers one side, then the other
+    --two-sided-reverse                 same as '--odd-even' but with the need of
+                                        reversing every single paper.
+    -u, --unpaper[=OPTIONS]             enable unpaper. You may pass
+                                        options to unpaper
+
+
+Exit status:
+ 0  if OK,
+ 1  if an error occurred.
+
+This  is  free  software: you are free to change and redistribute it.  There
+is NO WARRANTY, to the extent  permitted by law.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+Copyright  ©  2017  Franco Masotti.
+EOF
+}
+
+# A function that prints the variable name and value of all
+# the flags enabled by the user. This is useful to check that
+# all the flags are correct, as kind of a dry run.
+show_flags()
+{
+
+    local flags="${*}"
+
+    for flag in ${flags}; do
+            printf "%s='%s'\n" "${flag}" "${!flag}"
+    done
+}
+
+getopt_error()
+{
+    local program_name="${0}"
+
+    printf "%s\n" "Try '"${program_name}" --help' for more information"
+} 1>&2 2>&-
+
+main()
+{
+    # Create a new array from the reference of the input one.
+    # See https://stackoverflow.com/questions/1063347/passing-arrays-as-parameters-in-bash
+    # See some comments below.
+    declare -a argc=("${!1}")
+
+    local getopt_short_options='hi:mrstu::'
+    local getopt_long_options='help,imagemagick:,list-modes,list-resolutions,list-sources,mode:,print-flags,resolution:,source:,two-sided,two-sided-reverse,unpaper::'
+
+    # Set the default values for the flags.
+    local imagemagick='-normalize -level 70%,100%,1.0'
+    local mode='Lineart'
+    local resolution='300'
+    local source='ADF'
+    local unpaper='false'
+
+    local program_name="${0}"
+    opts="$(getopt \
+        --name "${program_name}" \
+        --shell bash \
+        --options "${getopt_short_options}" \
+        --longoptions "${getopt_long_options}" \
+        -- \
+        "${argc[@]}")"
+    getopt_retval=${?}
+    # Check that getopt works and that some kind of argument
+    # is passed to the script. This is "quotation hell".
+    a="'"${argc[@]}"'"
+    { [ ${getopt_retval} -ne 0 ] || [ -z "${a}" ]; } && getopt_error && return 1
+    eval set -- "${opts}"
+
+    # Option parsing.
+    while [ "${1}" != '--' ]; do
+        case "${1}" in
+
+            -h | --help )           help='true' ;;
+
+            -i | --imagemagick )    imagemagick="${2}";
+                                    shift 1 ;;
+
+            --list-modes )          list_modes='true' ;;
+
+            --list-sources )        list_sources='true' ;;
+
+            --list-resolutions )    list_resolutions='true' ;;
+
+            -m | --mode )           mode="${2}";
+                                    shift 1 ;;
+
+            --print-flags )         print_flags='true' ;;
+
+            -r | --resolution )     resolution="${2}";
+                                    shift 1 ;;
+
+            -s | --source )         source="${2}";
+                                    shift 1 ;;
+
+            -t | --two-sided )      two_sided='true' ;;
+
+            --two-sided-reverse )   two_sided_reverse='true' ;;
+
+            -u | --unpaper )        unpaper="${2}";
+                                    shift 1 ;;
+
+        esac
+        # Iterate through all arguments.
+        shift 1
+    done
+
+    shift 1
+    # Everything else after '--' is an argument.
+    argc="${*}"
+
+    # Check that the flags that must be non empty are actually not empty.
+    # A user might infact circumvent getopt's mechanisms like this
+    # ./program -flag ''
+    # This can also be done inside the option parser loop but to avoid nestings
+    # I prefer it done here.
+    { [ -z "${imagemagick}" \
+        || [ -z "${mode}" ] \
+        || [ -z "${resolution}" ] \
+        || [ -z "${source}"; } \
+        && getopt_error && return 1
+    [ "${print_flags}" = 'true' ] \
+        && show_flags \
+            'flag_a' \
+            'flag_b' \
+            'flag_c' \
+            'flag_d' \
+            'flag_e' \
+            'flag_f' \
+        && return 0
+    [ "${help}" = 'true' ] && show_help && return 0
+    # Override values of optional parameters.
+    [ -z "${flag_f}" ] && flag_f='true'
+
+    # From now on you should call a function or an external program
+    # using the values of the flag variables.
+    [ "${list_modes}" = 'true' ] && get_supported_modes && return ${?}
+    [ "${list_resolutions}" = 'true' ] && get_supported_resolutions && return ${?}
+    [ "${list_sources}" = 'true' ] && get_supported_sources && return ${?}
+
+    local output_file="${1}"
+    [ -z "${output_file}" ] && getopt_error && return 1
+
+    preliminary_controls \
+        "${imagemagick}" \
+        "${mode}" \
+        "${resolution}" \
+        "${source}" \
+        "${unpaper}" \
+        "${output_file}"
+}
+
+# Test dependencies and versions.
+# getopt must return 4 to be fully compatible. See getopt's manual.
+which bash getopt 1>/dev/null 2>/dev/null && { getopt -T; [ ${?} -eq 4 ]; }
+
+# Get and pass argc to the main function.
+# All this work with an array must be done to preserve
+# quotations for arguments that have whitespaces.
+# See https://lists.debian.org/debian-user/2007/12/msg01244.html
+declare -a opts=()
+for opt in "${@}"; do
+    opts=("${opts[@]}" "${opt}")
+done
+main 'opts[@]'
+
