@@ -59,7 +59,7 @@ scan()
         batch_increment=1
     fi
 
-    printf "Scanning...\n" 1>&2-
+    printf "%s\n" 'Scanning...'
     # Put source option before resolution to avoid the error:
     # https://bugs.launchpad.net/simple-scan/+bug/983441
     scanimage \
@@ -121,7 +121,7 @@ convert_single()
 
 pnm_to_pdf()
 {
-    printf "PNM to PDF...\n" 1>&2-
+    printf "%s\n" 'PNM to PDF...'
 
     # A hack to avoid GNU Parallel's message
     mkdir -p ~/.parallel && touch ~/.parallel/will-cite
@@ -135,7 +135,7 @@ pnm_to_pdf()
 
 pdf_cat()
 {
-    printf "Assembling PDF...\n" 1>&2-
+    printf "%s\n" 'Assembling PDF...'
     # O(n)
     # Always cat to the output file.
     # Unlike pdfunite, pdftk does not corrupt the pdf.
@@ -157,8 +157,6 @@ pdf_cat()
         printf "[ERROR]\n" 1>&2-
         exit 1
     fi
-
-    printf "Done.\n" 1>&2-
 }
 
 get_supported_parameters()
@@ -168,22 +166,16 @@ get_supported_parameters()
 
 get_supported_resolutions()
 {
-    local supported_params="${1}"
-
     echo "${supported_params}" | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi'
 }
 
 get_supported_modes()
 {
-    local supported_params="${1}"
-
     echo "${supported_params}" | grep mode | awk '{print $2}' | tr '|' ' '
 }
 
 get_supported_sources()
 {
-    local supported_params="${1}"
-
     echo "${supported_params}" | grep source | awk '{print $2}' | tr '|' ' '
 }
 
@@ -246,14 +238,14 @@ preliminary_checks()
     source="${4}"
     unpaper="${5}"
     output_file="${6}"
-
     # Get the parameters and check that the scanner is connected.
-    local params="$(get_supported_parameters)"
+    supported_params="$(get_supported_parameters)"
+
     [ ${?} -ne 0 ] && return ${?}
 
-    { check_supported_parameters "modes" "${mode}" "${params}" \
-        && check_supported_parameters "resolutions" "${resolution}" "${params}" \
-        && check_supported_parameters "sources" "${source}" "${params}"; } \
+    { check_supported_parameters "modes" "${mode}" \
+        && check_supported_parameters "resolutions" "${resolution}" \
+        && check_supported_parameters "sources" "${source}"; } \
         || return 1
 
     chain
