@@ -90,7 +90,7 @@ main()
     # See some comments below.
     declare -a argc=("${!1}")
 
-    local getopt_short_options='hi:mrstu::'
+    local getopt_short_options='hi:m:r:s:tu::'
     local getopt_long_options='help,imagemagick:,list-modes,list-resolutions,list-sources,mode:,print-flags,resolution:,source:,two-sided,two-sided-reverse,unpaper::'
 
     # Set the default values for the flags.
@@ -178,7 +178,7 @@ main()
         && return 0
     [ "${help}" = 'true' ] && show_help && return 0
     # Override values of optional parameters.
-    [ -z "${flag_f}" ] && flag_f='true'
+    [ -z "${unpaper}" ] && unpaper='true'
 
     # From now on you should call a function or an external program
     # using the values of the flag variables.

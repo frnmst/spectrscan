@@ -23,7 +23,7 @@
 #
 
 set -x
-#set -e
+
 TMP_DIR="$(pwd)/.spectrscan-$RANDOM"
 SRC_DIR="$(pwd)"
 
@@ -31,14 +31,13 @@ check_software()
 {
     which \
         scanimage \
-        unapaper \
+        unpaper \
         awk \
         convert \
         pdftk \
         parallel \
         file \
-        pamfix \
-        netpbm
+        pamfix
 } 1>/dev/null 2>/dev/null
 
 scan()
@@ -79,13 +78,13 @@ exists_output_file()
     if [ -f "$SRC_DIR"/"$output_file" ]; then
         if [ "$(file --mime-type "$SRC_DIR"/"$output_file" \
         | awk '{ print $2 }')" = "application/pdf" ]; then
-            printf "true"
+            printf 'true'
         else
             # Not a pdf file.
             printf "error"
         fi
     else
-        printf "false"
+        printf 'false'
     fi
 }
 
@@ -98,22 +97,23 @@ convert_single()
 
     pamfix -truncate "$filE" > "$filE".tmp.pnm.bis
 
-    if [ "$imagemagick_options" != "true" ] \
-        && [ "$imagemagick_options" != "false" ]; then
-        convert $imagemagick_options "$filE".tmp.pnm.bis "$filE".tmp.pnm
+    if [ "${imagemagick_options}" != 'false' ]; then
+        convert ${imagemagick_options} "$filE".tmp.pnm.bis "$filE".tmp.pnm
     else
         mv "$filE".tmp.pnm.bis "$filE".tmp.pnm
     fi
 
-    if [ "$unpaper_options" = "true" ]; then
+    if [ "${unpaper_options}" = 'true' ]; then
         unpaper --overwrite -q "$filE".tmp.pnm "$filE".pnm
-    elif [ "$unpaper_options" = "false" ]; then
+    elif [ "${unpaper_options}" = 'false' ]; then
         mv "$filE".tmp.pnm "$filE".pnm
     else
-        unpaper --overwrite -q $unpaper_options "$filE".tmp.pnm "$filE".pnm
+        unpaper --overwrite -q ${unpaper_options} "$filE".tmp.pnm "$filE".pnm
     fi
 
+    #
     # OCR stuff goes here.
+    #
 
     convert -compress lzw "$filE".pnm "$filE".pdf
 
@@ -142,7 +142,7 @@ pdf_cat()
     pdftk *.pdf cat output "$output_file".tmp
 
     # O(1)
-    if [ "$(exists_output_file)" = "true" ]; then
+    if [ "$(exists_output_file)" = 'true' ]; then
 
         cp "$SRC_DIR"/"$output_file" "$SRC_DIR"/."$output_file"
 
@@ -151,7 +151,7 @@ pdf_cat()
 
         rm "$SRC_DIR"/."$output_file"
 
-    elif [ "$(exists_output_file)" = "false" ]; then
+    elif [ "$(exists_output_file)" = 'false' ]; then
         mv "$output_file".tmp "$SRC_DIR"/"$output_file"
     else
         printf "[ERROR]\n" 1>&2-
@@ -196,9 +196,14 @@ check_supported_parameters()
         fi
     done
     if [ $counter -eq 0 ]; then
-        printf "ERROR: Supported $parameter: ${!parameter_full_name}\n" 1>&2-
+        printf "error: supported $parameter: ${!parameter_full_name}\n" 1>&2-
         return 1
     fi
+}
+
+cleanup()
+{
+    rm -rf "$TMP_DIR"
 }
 
 chain()
@@ -206,7 +211,7 @@ chain()
     mkdir "$TMP_DIR"
     pushd "$TMP_DIR"
 
-    if [ "$odd_even" = "true" ]; then
+    if [ "$odd_even" = 'true' ]; then
         scan "odd" \
             && printf "%s\n" 'turn the paper(s) and hit return when ready' \
             && read \
@@ -216,8 +221,8 @@ chain()
     fi
 
     # Feeder out of documents.
-    if [ $? -eq 7 ]; then
-        printf "No paper inserted\n" 1>&2
+    if [ ${?} -eq 7 ]; then
+        cleanup
         return 1
     fi
 
@@ -226,17 +231,16 @@ chain()
     cleanup
 
     popd
-    rm -rf "$TMP_DIR"
 }
 
 preliminary_checks()
 {
     # Leak all variables to avoid passing them every time.
-    imagemagick="${1}"
+    imagemagick_options="${1}"
     mode="${2}"
     resolution="${3}"
     source="${4}"
-    unpaper="${5}"
+    unpaper_options="${5}"
     output_file="${6}"
     # Get the parameters and check that the scanner is connected.
     supported_params="$(get_supported_parameters)"
