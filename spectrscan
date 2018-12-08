@@ -24,8 +24,7 @@
 
 set -x
 
-TMP_DIR="$(pwd)/.spectrscan-$RANDOM"
-SRC_DIR="$(pwd)"
+. ./spectrscan.conf
 
 check_software()
 {
@@ -67,16 +66,18 @@ scan()
         batch_increment=1
     fi
 
-    printf "%s\n" 'Scanning...'
     # Put source option before resolution to avoid the error:
     # https://bugs.launchpad.net/simple-scan/+bug/983441
+    scan_command=''
+    [ "${scanner_support_source}" = 'true' ] && scan_command=""${scan_command}" --source "${source}""
+    [ "${scanner_supports_resolution}" = 'true' ] && scan_command=""${scan_command}" --resolution "${resolution}""
+    [ "${scanner_supports_mode}" = 'true' ] && scan_command=""${scan_command}" --mode "${mode}""
+
     scanimage \
-        --source "$source" \
+        ${scan_command} \
         --batch=spectrscan_out%08d.pnm \
         --batch-start ${batch_start} \
         --batch-increment ${batch_increment} \
-        --resolution "$resolution" \
-        --mode "$mode" \
         --progress \
         --format=pnm
 }
@@ -90,7 +91,7 @@ exists_output_file()
             printf 'true'
         else
             # Not a pdf file.
-            printf "error"
+            printf 'error'
         fi
     else
         printf 'false'
@@ -130,8 +131,6 @@ convert_single()
 
 pnm_to_pdf()
 {
-    printf "%s\n" 'PNM to PDF...'
-
     # A hack to avoid GNU Parallel's message
     mkdir -p ~/.parallel && touch ~/.parallel/will-cite
     # n = number of new pages
@@ -144,7 +143,7 @@ pnm_to_pdf()
 
 pdf_cat()
 {
-    printf "%s\n" 'Assembling PDF...'
+    printf "%s\n" 'assembling PDF...'
     # O(n)
     # Always cat to the output file.
     # Unlike pdfunite, pdftk does not corrupt the pdf.
@@ -175,7 +174,7 @@ get_supported_parameters()
 
 get_supported_resolutions()
 {
-    echo "${supported_params}" | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi'
+    echo "${supported_params}" | grep resolution | awk '{print $2}' | tr '|' ' ' | tr -d 'dpi'
 }
 
 get_supported_modes()
@@ -186,33 +185,6 @@ get_supported_modes()
 get_supported_sources()
 {
     echo "${supported_params}" | grep source | awk '{print $2}' | tr '|' ' '
-}
-
-check_supported_parameters()
-{
-    local parameter="${1}"
-    local value="${2}"
-    local supported_parameters="${3}"
-    local counter=0
-    local parameter_full_name=''
-    local p=''
-
-    parameter_full_name="supported_${parameter}"
-    eval "$parameter_full_name='$(get_supported_"${parameter}" "${supported_parameters}")'"
-    for p in ${!parameter_full_name}; do
-        if [ "$value" = "$p" ]; then
-            counter=$(($counter+1))
-        fi
-    done
-    if [ $counter -eq 0 ]; then
-        printf "error: supported $parameter: ${!parameter_full_name}\n" 1>&2-
-        return 1
-    fi
-}
-
-cleanup()
-{
-    rm -rf "$TMP_DIR"
 }
 
 chain()
@@ -240,15 +212,9 @@ chain()
         scan
     fi
 
-    # Feeder out of documents unexpectedly.
-#    if [ ${?} -eq 7 ]; then
-#        cleanup
-#        return 1
-#    fi
-
     pnm_to_pdf
     pdf_cat
-    cleanup
+    rm -rf "$TMP_DIR"
 
     popd
 }
@@ -265,14 +231,11 @@ preliminary_checks()
     output_file="${7}"
     # Get the parameters and check that the scanner is connected.
     supported_params="$(get_supported_parameters)"
-
     [ ${?} -ne 0 ] && return ${?}
 
-    { check_supported_parameters 'modes' "${mode}" \
-        && check_supported_parameters 'resolutions' "${resolution}" \
-        && check_supported_parameters 'sources' "${source}"; } \
-        || return 1
-
+    [ -n "$(get_supported_resolutions)" ] && scanner_supports_resolution='true'
+    [ -n "$(get_supported_modes)" ] && scanner_supports_mode='true'
+    [ -n "$(get_supported_sources)" ] && scanner_support_source='true'
     chain
 }
 

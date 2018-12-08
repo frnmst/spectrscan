@@ -95,11 +95,11 @@ main()
     local getopt_long_options='help,imagemagick:,list-modes,list-resolutions,list-sources,mode:,print-flags,resolution:,source:,two-sided,two-sided-reverse,unpaper::'
 
     # Set the default values for the flags.
-    local imagemagick='-normalize -level 70%,100%,1.0'
-    local mode='Lineart'
-    local resolution='300'
-    local source='ADF'
-    local unpaper='false'
+    local imagemagick="${IMAGEMAGICK}"
+    local mode="${MODE}"
+    local resolution="${RESOLUTION}"
+    local source="${SOURCE}"
+    local unpaper="${UNPAPER}"
 
     local program_name="${0}"
     opts="$(getopt \
