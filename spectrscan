@@ -40,20 +40,29 @@ check_software()
         pamfix
 } 1>/dev/null 2>/dev/null
 
+get_last_page_side_a()
+{
+    ls spectrscan_out*.pnm | sort --reverse | head -n1 | tr -d [a-z]._
+}
+
 scan()
 {
-    local file_counter="${1}"
-
-    local batch_start=1
-    local batch_increment=1
-
-    if [ "$file_counter" = "odd" ]; then
-        batch_start=1
-        batch_increment=2
-    elif [ "$file_counter" = "even" ]; then
+    if [ "${two_sided}" = 'true' ] && [ "${side_b}" = 'true' ]; then
+        # side_b
+        batch_start=$(("$(get_last_page_side_a)"+1))
+        batch_increment=-2
+    elif [ "${two_sided}" = 'reverse' ] && [ "${side_b}" = 'true' ]; then
+        # side_b
         batch_start=2
         batch_increment=2
-    else
+    fi
+    if [ "${two_sided}" != 'false' ] && [ "${side_a}" = 'true' ]; then
+        # true, reverse, first side.
+        batch_start=1
+        batch_increment=2
+    fi
+    if [ "${two_sided}" = 'false' ]; then
+        # single sided
         batch_start=1
         batch_increment=1
     fi
@@ -211,20 +220,31 @@ chain()
     mkdir "$TMP_DIR"
     pushd "$TMP_DIR"
 
-    if [ "$odd_even" = 'true' ]; then
-        scan "odd" \
+    if [ "${two_sided}" = 'true' ]; then
+        side_a='true'
+        scan \
             && printf "%s\n" 'turn the paper(s) and hit return when ready' \
             && read \
-            && scan "even"
+            && side_a='false' \
+            && side_b='true' \
+            && scan
+    elif [ "${two_sided}" = 'reverse' ]; then
+        side_a='true'
+        scan \
+            && printf "%s\n" 'turn the paper(s) and hit return when ready' \
+            && read \
+            && side_a='false' \
+            && side_b='true' \
+            && scan
     else
         scan
     fi
 
-    # Feeder out of documents.
-    if [ ${?} -eq 7 ]; then
-        cleanup
-        return 1
-    fi
+    # Feeder out of documents unexpectedly.
+#    if [ ${?} -eq 7 ]; then
+#        cleanup
+#        return 1
+#    fi
 
     pnm_to_pdf
     pdf_cat
@@ -241,15 +261,16 @@ preliminary_checks()
     resolution="${3}"
     source="${4}"
     unpaper_options="${5}"
-    output_file="${6}"
+    two_sided="${6}"
+    output_file="${7}"
     # Get the parameters and check that the scanner is connected.
     supported_params="$(get_supported_parameters)"
 
     [ ${?} -ne 0 ] && return ${?}
 
-    { check_supported_parameters "modes" "${mode}" \
-        && check_supported_parameters "resolutions" "${resolution}" \
-        && check_supported_parameters "sources" "${source}"; } \
+    { check_supported_parameters 'modes' "${mode}" \
+        && check_supported_parameters 'resolutions' "${resolution}" \
+        && check_supported_parameters 'sources' "${source}"; } \
         || return 1
 
     chain

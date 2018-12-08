@@ -46,8 +46,9 @@ Options:
     -t, --two-sided                     toggle preserve the order in
                                         double sided paper: scan a batch of
                                         papers one side, then the other
-    --two-sided-reverse                 same as '--odd-even' but with the need of
-                                        reversing every single paper.
+    --two-sided-reverse                 same as '--two-sided' but with the need of
+                                        reversing every single paper. This
+                                        option conflicts with '--two-sided'
     -u, --unpaper[=OPTIONS]             enable unpaper. You may pass
                                         options to unpaper
 
@@ -182,6 +183,10 @@ main()
 
     # From now on you should call a function or an external program
     # using the values of the flag variables.
+    [ "${two_sided}" = 'true' ] \
+        && [ "${two_sided_reverse}" = 'true' ] \
+        && getopt_error \
+        && return 1
     [ "${list_modes}" = 'true' ] \
         && get_supported_modes "$(get_supported_parameters)" \
         && return ${?}
@@ -191,6 +196,8 @@ main()
     [ "${list_sources}" = 'true' ] \
         && get_supported_sources "$(get_supported_parameters)" \
         && return ${?}
+    # Override two_sided value if necessary.
+    [ "${two_sided_reverse}" = 'true' ] && two_sided='reverse'
 
     local output_file="${1}"
     [ -z "${output_file}" ] && getopt_error && return 1
@@ -201,6 +208,7 @@ main()
         "${resolution}" \
         "${source}" \
         "${unpaper}" \
+        "${two_sided}" \
         "${output_file}"
 }
 
