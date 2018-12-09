@@ -37,14 +37,14 @@ check_software()
         parallel \
         file \
         pamfix
-} 1>/dev/null 2>/dev/null
+}
 
 get_last_page_side_a()
 {
     ls spectrscan_out*.pnm | sort --reverse | head -n1 | tr -d [a-z]._
 }
 
-scan()
+select_page_parameters()
 {
     if [ "${two_sided}" = 'true' ] && [ "${side_b}" = 'true' ]; then
         # side_b
@@ -56,7 +56,7 @@ scan()
         batch_increment=2
     fi
     if [ "${two_sided}" != 'false' ] && [ "${side_a}" = 'true' ]; then
-        # true, reverse, first side.
+        # true, reverse; first side.
         batch_start=1
         batch_increment=2
     fi
@@ -65,16 +65,29 @@ scan()
         batch_start=1
         batch_increment=1
     fi
+}
 
+build_scan_sub_command()
+{
+    # Since these are scanner specific options, they need to be probed.
+    #
     # Put source option before resolution to avoid the error:
     # https://bugs.launchpad.net/simple-scan/+bug/983441
-    scan_command=''
-    [ "${scanner_support_source}" = 'true' ] && scan_command=""${scan_command}" --source "${source}""
-    [ "${scanner_supports_resolution}" = 'true' ] && scan_command=""${scan_command}" --resolution "${resolution}""
-    [ "${scanner_supports_mode}" = 'true' ] && scan_command=""${scan_command}" --mode "${mode}""
+    local scan_command=''
+    [ -n "$(get_supported_resolutions)" ] && scan_command=""${scan_command}" --source "${source}""
+    [ -n "$(get_supported_modes)" ] && scan_command=""${scan_command}" --resolution "${resolution}""
+    [ -n "$(get_supported_sources)" ] && scan_command=""${scan_command}" --mode "${mode}""
+
+    echo "${scan_command}"
+}
+
+scan()
+{
+    select_page_parameters
+    local scan_sub_command="$(build_scan_sub_command)"
 
     scanimage \
-        ${scan_command} \
+        ${scan_sub_command} \
         --batch=spectrscan_out%08d.pnm \
         --batch-start ${batch_start} \
         --batch-increment ${batch_increment} \
@@ -85,16 +98,18 @@ scan()
 exists_output_file()
 {
     # Check if output file exists and is a pdf file.
+    # This is needed to concatenate new documents to an
+    # already existing pdf file.
     if [ -f "$SRC_DIR"/"$output_file" ]; then
         if [ "$(file --mime-type "$SRC_DIR"/"$output_file" \
-        | awk '{ print $2 }')" = "application/pdf" ]; then
-            printf 'true'
+            | awk '{ print $2 }')" = "application/pdf" ]; then
+            echo 'true'
         else
             # Not a pdf file.
-            printf 'error'
+            echo 'error'
         fi
     else
-        printf 'false'
+        echo 'false'
     fi
 }
 
@@ -129,6 +144,9 @@ convert_single()
 
 } 1>/dev/null 2>/dev/null
 
+# TODO use inotify || add option to post process if not available
+# (eg: sshfs filesystem).
+# process in /tmp if possible. -> the previous check is not needed.
 pnm_to_pdf()
 {
     # A hack to avoid GNU Parallel's message
@@ -151,14 +169,10 @@ pdf_cat()
 
     # O(1)
     if [ "$(exists_output_file)" = 'true' ]; then
-
         cp "$SRC_DIR"/"$output_file" "$SRC_DIR"/."$output_file"
-
         pdftk "$SRC_DIR"/."$output_file" "$output_file".tmp \
             cat output "$SRC_DIR"/"$output_file"
-
         rm "$SRC_DIR"/."$output_file"
-
     elif [ "$(exists_output_file)" = 'false' ]; then
         mv "$output_file".tmp "$SRC_DIR"/"$output_file"
     else
@@ -189,24 +203,15 @@ get_supported_sources()
 
 chain()
 {
-    mkdir "$TMP_DIR"
-    pushd "$TMP_DIR"
+    mkdir "${TMP_DIR}"
+    pushd "${TMP_DIR}"
 
-    if [ "${two_sided}" = 'true' ]; then
+    if [ "${two_sided}" != 'false' ]; then
         side_a='true'
         scan \
             && printf "%s\n" 'turn the paper(s) and hit return when ready' \
             && read \
-            && side_a='false' \
-            && side_b='true' \
-            && scan
-    elif [ "${two_sided}" = 'reverse' ]; then
-        side_a='true'
-        scan \
-            && printf "%s\n" 'turn the paper(s) and hit return when ready' \
-            && read \
-            && side_a='false' \
-            && side_b='true' \
+            && side_a='false'; side_b='true' \
             && scan
     else
         scan
@@ -214,9 +219,9 @@ chain()
 
     pnm_to_pdf
     pdf_cat
-    rm -rf "$TMP_DIR"
 
     popd
+    rm -rf "${TMP_DIR}"
 }
 
 preliminary_checks()
@@ -229,15 +234,14 @@ preliminary_checks()
     unpaper_options="${5}"
     two_sided="${6}"
     output_file="${7}"
+
     # Get the parameters and check that the scanner is connected.
     supported_params="$(get_supported_parameters)"
-    [ ${?} -ne 0 ] && return ${?}
-
-    [ -n "$(get_supported_resolutions)" ] && scanner_supports_resolution='true'
-    [ -n "$(get_supported_modes)" ] && scanner_supports_mode='true'
-    [ -n "$(get_supported_sources)" ] && scanner_support_source='true'
+    # FIXME: this might not work.
+    local retval=${?}
+    [ ${retval} -ne 0 ] && return ${retval}
     chain
 }
 
-check_software || { printf "%s\n" 'check software'; exit ${?}; }
+check_software || exit ${?}
 . ./fbopt
