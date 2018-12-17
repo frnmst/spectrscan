@@ -9,11 +9,8 @@ paper to pdf converter suitable for texts.
 
 - [spectrscan](#spectrscan)
     - [Table of contents](#table-of-contents)
+    - [Notes](#notes)
     - [Examples](#examples)
-        - [Default options](#default-options)
-        - [Two-sided](#two-sided)
-        - [Misc](#misc)
-    - [Path](#path)
     - [Help](#help)
     - [Relevant features](#relevant-features)
     - [Relevant links and ideas](#relevant-links-and-ideas)
