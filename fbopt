@@ -158,6 +158,10 @@ main()
     # Everything else after '--' is an argument.
     argc="${*}"
 
+    # Override values of optional parameters.
+    # This must be done before showing the flags.
+    [ -z "${unpaper}" ] && unpaper='true'
+
     # Check that the flags that must be non empty are actually not empty.
     # A user might infact circumvent getopt's mechanisms like this
     # ./program -flag ''
@@ -170,16 +174,18 @@ main()
         && getopt_error && return 1
     [ "${print_flags}" = 'true' ] \
         && show_flags \
-            'flag_a' \
-            'flag_b' \
-            'flag_c' \
-            'flag_d' \
-            'flag_e' \
-            'flag_f' \
+            'imagemagick' \
+            'mode' \
+            'list_modes' \
+            'resolution' \
+            'list_resolutions' \
+            'source' \
+            'list_sources' \
+            'two_sided' \
+            'two_sided_reverse' \
+            'unpaper' \
         && return 0
     [ "${help}" = 'true' ] && show_help && return 0
-    # Override values of optional parameters.
-    [ -z "${unpaper}" ] && unpaper='true'
 
     # From now on you should call a function or an external program
     # using the values of the flag variables.
@@ -188,13 +194,16 @@ main()
         && getopt_error \
         && return 1
     [ "${list_modes}" = 'true' ] \
-        && get_supported_modes "$(get_supported_parameters)" \
+        && supported_params="$(get_supported_parameters)" \
+        && get_supported_modes \
         && return ${?}
     [ "${list_resolutions}" = 'true' ] \
-        && get_supported_resolutions "$(get_supported_parameters)" \
+        && supported_params="$(get_supported_parameters)" \
+        && get_supported_resolutions \
         && return ${?}
     [ "${list_sources}" = 'true' ] \
-        && get_supported_sources "$(get_supported_parameters)" \
+        && supported_params="$(get_supported_parameters)" \
+        && get_supported_sources \
         && return ${?}
     # Override two_sided value if necessary.
     [ "${two_sided_reverse}" = 'true' ] && two_sided='reverse'
