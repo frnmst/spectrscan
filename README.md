@@ -31,7 +31,8 @@ will be automatically appended to the tail of the file.
 Also note that the mode, resolution and source options must be supported by 
 your scanner.
 
-Default options are defined in the `spectrscan.conf` file.
+Default options are defined in the `./spectrscan.conf` file which is a symlink 
+that points to the `./spectrscan.HP_Officejet_2620.conf` profile.
 
 ## Examples
 
