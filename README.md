@@ -231,7 +231,7 @@ This is the error returned by `convert`:
 
 ![https://www.gnu.org/graphics/gplv3-127x51.png](https://www.gnu.org/graphics/gplv3-127x51.png)
 
-Copyright (C) 2017 frnmst (Franco Masotti) <franco.masotti@student.unife.it>
+Copyright (C) 2017-2018 frnmst (Franco Masotti)
 
 spectrscan is free software: you can redistribute it and/or modify it 
 under the terms of the GNU General Public License as published by the Free 
