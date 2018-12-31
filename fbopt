@@ -100,6 +100,7 @@ main()
     local resolution="${RESOLUTION}"
     local source="${SOURCE}"
     local unpaper="${UNPAPER}"
+    local two_sided="${TWO_SIDED}"
 
     local program_name="${0}"
     opts="$(getopt \

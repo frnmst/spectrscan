@@ -18,6 +18,7 @@ paper to pdf converter suitable for texts.
     - [Coming soon](#coming-soon)
     - [Origin of the name](#origin-of-the-name)
     - [Troubleshooting](#troubleshooting)
+    - [Tested on](#tested-on)
     - [License](#license)
 
 [](TOC)
@@ -185,6 +186,9 @@ http://www.jpeek.com/articles/linuxmag/2006-08/
 - [GNU Parallel](http://www.gnu.org/software/parallel/)
   - Execute image post processing jobs in parallel
 
+- [GNU stream editor](https://www.gnu.org/software/sed/)
+  - Remove leading zeros from filenames
+
 - [Netpbm](http://netpbm.sourceforge.net/)
   - Fix the newly scanned immages by truncating the unnecessary parts. This
     is mostly useful when scanning from the ADF
@@ -227,11 +231,17 @@ This is the error returned by `convert`:
 
     convert: attempt to perform an operation not allowed by the security policy `PDF' @ error/constitute.c/IsCoderAuthorized/408.
 
+## Tested on
+
+| Distribution | Scanner Name | `vendor:product` | Connection | 
+|--------------|--------------|------------------|------------|
+| Parabola GNU/Linux-libre | HP Officejet 2620 | `03f0:c911` | USB |
+
 ## License
 
 ![https://www.gnu.org/graphics/gplv3-127x51.png](https://www.gnu.org/graphics/gplv3-127x51.png)
 
-Copyright (C) 2017-2018 frnmst (Franco Masotti)
+Copyright (C) 2017-2018 frnmst (Franco Masotti) <franco.masotti@live.com>
 
 spectrscan is free software: you can redistribute it and/or modify it 
 under the terms of the GNU General Public License as published by the Free 
